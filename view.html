@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OTMZ: Dashboard de Cliques</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Fonts -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@400;600&display=swap"
+        rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#00F0FF',
+                        secondary: '#9D00FF',
+                        dark: '#0a0a0f',
+                        card: '#12121a',
+                        success: '#00ff66',
+                        error: '#ff0044'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        display: ['Orbitron', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #0a0a0f;
+            background-image: radial-gradient(circle at 50% 0%, rgba(0, 240, 255, 0.1), transparent 70%);
+        }
+
+        .glass {
+            background: rgba(18, 18, 24, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .neon-text {
+            text-shadow: 0 0 10px rgba(0, 240, 255, 0.5);
+        }
+    </style>
+</head>
+
+<body class="text-white min-h-screen flex flex-col items-center justify-center p-4">
+
+    <!-- Login Screen -->
+    <div id="login-screen"
+        class="glass p-8 rounded-xl shadow-2xl w-full max-w-sm border-t-2 border-primary transition-all duration-500">
+        <div class="text-center mb-8">
+            <h1
+                class="text-3xl font-display font-bold text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary">
+                OTMZ VIEW</h1>
+            <p class="text-gray-400 text-sm mt-2">Acesso Restrito</p>
+        </div>
+
+        <div class="space-y-4">
+            <div>
+                <label class="block text-xs font-display text-primary mb-1 tracking-wider">USUARIO</label>
+                <input type="email" id="email"
+                    class="w-full bg-black/50 border border-gray-800 text-white px-4 py-3 rounded focus:outline-none focus:border-primary focus:shadow-[0_0_15px_rgba(0,240,255,0.3)] transition-all"
+                    placeholder="admin@otmz.com">
+            </div>
+
+            <div>
+                <label class="block text-xs font-display text-primary mb-1 tracking-wider">SENHA</label>
+                <input type="password" id="password"
+                    class="w-full bg-black/50 border border-gray-800 text-white px-4 py-3 rounded focus:outline-none focus:border-primary focus:shadow-[0_0_15px_rgba(0,240,255,0.3)] transition-all"
+                    placeholder="••••••••">
+            </div>
+
+            <button onclick="window.handleLogin()"
+                class="w-full bg-primary hover:bg-white hover:scale-[1.02] text-black font-display font-bold py-3 rounded mt-4 transition-all duration-300 shadow-[0_0_20px_rgba(0,240,255,0.4)]">
+                ACESSAR
+            </button>
+            <p id="error-msg" class="text-error text-center text-sm font-bold hidden mt-2"></p>
+        </div>
+    </div>
+
+    <!-- Dashboard Screen -->
+    <div id="dashboard-screen" class="hidden w-full max-w-5xl animate-fade-in">
+        <div class="flex justify-between items-center mb-8">
+            <h1 class="text-3xl font-display font-bold text-white tracking-widest">
+                DASHBOARD <span class="text-primary text-sm align-top">LIVE</span>
+            </h1>
+            <button onclick="window.handleLogout()"
+                class="text-gray-400 hover:text-white text-sm font-sans flex items-center gap-2">
+                SAIR
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                    <polyline points="16 17 21 12 16 7"></polyline>
+                    <line x1="21" y1="12" x2="9" y2="12"></line>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Stats Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8" id="stats-container">
+            <!-- Checking Data... -->
+            <div class="col-span-full text-center py-20 text-gray-500 font-display animate-pulse">
+                RECUPERANDO DADOS DO SATÉLITE...
+            </div>
+        </div>
+
+        <div class="flex justify-center">
+            <button onclick="window.fetchStats()"
+                class="border border-white/10 hover:bg-white/5 text-primary px-6 py-2 rounded-full font-display text-sm tracking-wider transition-colors">
+                ATUALIZAR DADOS
+            </button>
+        </div>
+    </div>
+
+    <script>
+        console.log("OTMZ View Loaded - V2");
+
+        // Configuration
+        const CREDENTIALS = {
+            user: 'vinnipimentel@gmail.com',
+            pass: 'Lavini@300'
+        };
+
+        const SB_URL = 'https://zxsnzdhuedyteqinjvpj.supabase.co';
+        const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp4c256ZGh1ZWR5dGVxaW5qdnBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk4MjcwMTcsImV4cCI6MjA4NTQwMzAxN30.TYgzgW5wuvoB7_McTY3E2ScsZw8VY2bFl_Cx7nopOTs';
+
+        // Renamed to avoid global conflict with CDN injected identifier
+        let supabaseClient;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log("DOM Content Loaded");
+            if (window.supabase) {
+                try {
+                    supabaseClient = window.supabase.createClient(SB_URL, SB_KEY);
+                    console.log("Supabase Client Initialized");
+                } catch (e) {
+                    console.error("Failed to init supabase:", e);
+                }
+            } else {
+                console.error("Supabase lib not found");
+            }
+
+            // Allow triggering via window
+            window.handleLogin = handleLogin;
+            window.handleLogout = handleLogout;
+            window.fetchStats = fetchStats;
+
+            // Check session
+            if (localStorage.getItem('otmz_auth') === 'true') {
+                showDashboard();
+            }
+        });
+
+        // Auth Logic
+        function handleLogin() {
+            console.log("Attempting login...");
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const errorMsg = document.getElementById('error-msg');
+
+            console.log("Creds:", email, password);
+
+            if (email === CREDENTIALS.user && password === CREDENTIALS.pass) {
+                console.log("Login success");
+                localStorage.setItem('otmz_auth', 'true');
+                showDashboard();
+                errorMsg.classList.add('hidden');
+            } else {
+                console.warn("Login failed");
+                errorMsg.textContent = "ACESSO NEGADO: Credenciais inválidas.";
+                errorMsg.classList.remove('hidden');
+
+                // Shake effect
+                const loginBox = document.getElementById('login-screen');
+                loginBox.classList.add('translate-x-2');
+                setTimeout(() => loginBox.classList.remove('translate-x-2'), 100);
+            }
+        }
+
+        function handleLogout() {
+            localStorage.removeItem('otmz_auth');
+            location.reload();
+        }
+
+        function showDashboard() {
+            console.log("Showing dashboard");
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('dashboard-screen').classList.remove('hidden');
+            fetchStats();
+        }
+
+        // Data Logic
+        async function fetchStats() {
+            console.log("Fetching stats...");
+            if (!supabaseClient) {
+                console.error("Supabase client not ready");
+                return;
+            }
+
+            const container = document.getElementById('stats-container');
+
+            try {
+                const { data, error } = await supabaseClient
+                    .from('landing_page_clicks')
+                    .select('button_id');
+
+                if (error) throw error;
+
+                console.log("Stats received:", data);
+
+                // Aggregate Data
+                const counts = {};
+                data.forEach(item => {
+                    const id = item.button_id || 'unknown';
+                    counts[id] = (counts[id] || 0) + 1;
+                });
+
+                // Sort keys
+                const sortedKeys = Object.keys(counts).sort((a, b) => {
+                    // Try to sort naturally (btn-1, btn-2, btn-10)
+                    const numA = parseInt(a.replace('btn-', ''));
+                    const numB = parseInt(b.replace('btn-', ''));
+                    if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+                    return a.localeCompare(b);
+                });
+
+                if (sortedKeys.length === 0) {
+                    container.innerHTML = `
+                        <div class="col-span-full text-center py-20">
+                            <h2 class="text-2xl font-display text-gray-600">NENHUM CLIQUE REGISTRADO</h2>
+                            <p class="text-gray-500">Aguardando interação do público...</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                // Render
+                container.innerHTML = sortedKeys.map(key => `
+                    <div class="glass p-6 rounded-lg relative overflow-hidden group hover:border-primary/50 transition-colors">
+                        <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 text-6xl font-display">
+                            #${key.replace('btn-', '')}
+                        </div>
+                        <div class="relative z-10">
+                            <h3 class="text-gray-400 font-display text-xs tracking-widest mb-2 uppercase">BOTÃO ${key.replace('btn-', '')}</h3>
+                            <div class="flex items-baseline gap-2">
+                                <span class="text-4xl font-bold text-white group-hover:text-primary transition-colors">${counts[key]}</span>
+                                <span class="text-xs text-gray-500">cliques</span>
+                            </div>
+                        </div>
+                        <div class="h-1 w-full bg-gray-800 mt-4 rounded-full overflow-hidden">
+                            <div class="h-full bg-gradient-to-r from-primary to-secondary w-[0%]" style="width: 100%; transition: width 1s ease;"></div>
+                        </div>
+                    </div>
+                `).join('');
+
+            } catch (err) {
+                console.error(err);
+                container.innerHTML = `<div class="bg-red-900/20 border border-error p-4 rounded text-error">Erro ao carregar dados: ${err.message}</div>`;
+            }
+        }
+    </script>
+</body>
+
+</html>

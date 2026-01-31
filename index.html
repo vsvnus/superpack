@@ -3210,7 +3210,7 @@
                     <span class="btn-icon">⚡</span>
                     <div class="btn-text">
                         <span class="btn-title">QUERO OTIMIZAR AGORA</span>
-                        <span class="btn-sub">Acesso vitalício e imediato</span>
+                        <span class="btn-sub">Acesso seguro e imediato</span>
                     </div>
                 </a>
 
@@ -3842,6 +3842,69 @@
             setInterval(updateTimer, 1000);
         })();
 
+    </script>
+    <!-- Supabase Tracking -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        (async function () {
+            console.log("Initializing OTMZ Tracking...");
+            const SB_URL = 'https://zxsnzdhuedyteqinjvpj.supabase.co';
+            const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp4c256ZGh1ZWR5dGVxaW5qdnBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk4MjcwMTcsImV4cCI6MjA4NTQwMzAxN30.TYgzgW5wuvoB7_McTY3E2ScsZw8VY2bFl_Cx7nopOTs';
+
+            // Definição manual dos botões para garantir a ordem correta (Passo 1 ao 6)
+            // Se o seletor automático falhar, podemos buscar por texto ou ID específico
+
+            const supabase = window.supabase ? window.supabase.createClient(SB_URL, SB_KEY) : null;
+
+            if (!supabase) {
+                console.error("Supabase client failed to load");
+                return;
+            }
+
+            // Mapa de Texto -> ID para garantir rastreamento exato
+            const buttonMap = [
+                { id: 'btn-1', text: 'DESBLOQUEAR FPS' },
+                { id: 'btn-2', text: 'RESOLVER ISSO AGORA' },
+                { id: 'btn-3', text: 'TURBINAR MEU WINDOWS' },
+                { id: 'btn-4', text: 'QUERO +80 FPS' },
+                { id: 'btn-5', text: 'OTIMIZAR MEU PC AGORA' },
+                { id: 'btn-6', text: 'GARANTIR MEUS BÔNUS' },
+                { id: 'btn-7', text: 'QUERO OTIMIZAR AGORA' }
+            ];
+
+            // Seleciona todos os links/botões que podem ser CTAs
+            const allLinks = Array.from(document.querySelectorAll('a, button'));
+
+            console.log(`[SETUP] Verificando ${allLinks.length} elementos para mapeamento...`);
+
+            let foundCount = 0;
+
+            allLinks.forEach(el => {
+                const text = el.innerText.toUpperCase().replace(/\s+/g, ' '); // Limpa espaços e quebras
+
+                // Tenta encontrar um match no mapa
+                const match = buttonMap.find(item => text.includes(item.text));
+
+                if (match) {
+                    const trackingId = match.id;
+                    el.setAttribute('data-tracking-id', trackingId);
+                    foundCount++;
+
+                    console.log(`[BIND] Botão Encontrado: ${trackingId} -> "${text.substring(0, 30)}..."`);
+
+                    el.addEventListener('click', async () => {
+                        console.log(`[CLICK] Botão ${trackingId} clicado!`);
+                        try {
+                            await supabase.from('landing_page_clicks').insert([{ button_id: trackingId }]);
+                            console.log(`[SUCESSO] ${trackingId} enviado.`);
+                        } catch (e) {
+                            console.error(`[ERRO] Falha ${trackingId}:`, e);
+                        }
+                    });
+                }
+            });
+            console.log(`[SETUP] Total de botões mapeados: ${foundCount}/${buttonMap.length}`);
+        })();
     </script>
 </body>
 
